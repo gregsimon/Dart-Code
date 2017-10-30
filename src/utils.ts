@@ -34,11 +34,30 @@ export function checkIsFlutterProject(): boolean {
 
 export function findSdks(): Sdks {
 	const fuchsiaRoot = findFuchsiaRoot();
+	const protoSdk = findProtoSdk();
+	if (protoSdk) {
+		return {
+			dart: path.join(protoSdk, "dart-sdk"),
+			flutter: path.join(protoSdk, "flutter"),
+		}
+	} else {
+		const flutterSdk = isFuchsiaProject ? findFuchsiaFlutterSdk(fuchsiaRoot) : isFlutterProject ? findFlutterSdk() : null;
+		const dartSdk = isFuchsiaProject ? findFuchsiaDartSdk(fuchsiaRoot) : isFlutterProject ? findFlutterDartSdk(flutterSdk) : findDartSdk();
 
-	const flutterSdk = isFuchsiaProject ? findFuchsiaFlutterSdk(fuchsiaRoot) : isFlutterProject ? findFlutterSdk() : null;
-	const dartSdk = isFuchsiaProject ? findFuchsiaDartSdk(fuchsiaRoot) : isFlutterProject ? findFlutterDartSdk(flutterSdk) : findDartSdk();
+		return { dart: dartSdk, flutter: flutterSdk };
+	}
+}
 
-	return { dart: dartSdk, flutter: flutterSdk };
+function findProtoSdk(): string | null {
+	const protoSdk = path.join(path.dirname(workspace.rootPath), 'sdk');
+	const stat = fs.statSync(protoSdk);
+	if (stat.isDirectory()) {
+		return protoSdk;
+	}
+	if (stat.isSymbolicLink()) {
+		return fs.readlinkSync(protoSdk);
+	}
+	return null;
 }
 
 function findDartSdk(): string {
